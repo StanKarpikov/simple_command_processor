@@ -1,7 +1,6 @@
 import matplotlib.pyplot as plt
 from scipy import signal
 from scipy.io import wavfile
-import os
 import numpy as np
 import scipy.misc
 import pathlib
@@ -14,7 +13,7 @@ directory = prefix + '/speech_commands_v0.01'
 
 validation_part = 0.1
 test_part = 0.01
-folder_base     = directory+'/spectrograms'
+folder_base     = prefix+'/spectrograms'
 folder_on       = '/on'
 folder_off      = '/off'
 folder_validation  = '/validate'
@@ -32,6 +31,12 @@ for filename in os.listdir(folder_base):
     except Exception as e:
         print('Failed to delete %s. Reason: %s' % (file_path, e))
 
+os.makedirs(folder_base+folder_train+folder_on, exist_ok=True)
+os.makedirs(folder_base+folder_validation+folder_on, exist_ok=True)
+os.makedirs(folder_base+folder_test+folder_on, exist_ok=True)
+os.makedirs(folder_base+folder_train+folder_off, exist_ok=True)
+os.makedirs(folder_base+folder_validation+folder_off, exist_ok=True)
+os.makedirs(folder_base+folder_test+folder_off, exist_ok=True)
 # ---------------- Add new files ----------------
 for root, subdirs, files in os.walk(directory):
 #for filename in os.listdir(directory):

@@ -1,27 +1,19 @@
 import tensorflow as tf
 import tensorflow .keras.layers as layers
 import matplotlib.pyplot as plt
+import matplotlib
 import numpy as np
 from PIL import Image
-# image_paths, lbls = ["selfies-data/1", "selfies-data/2"], [0., 1.]
-#
-# labels = []
-# file_names = []
-# for d, l in zip(image_paths, lbls):
-#     # get the list all the images file names
-#     name = [os.path.join(d,f) for f in os.listdir(d)]
-#     file_names.extend(name)
-#     labels.extend([l] * len(name))
-#
-# file_names = tf.convert_to_tensor(file_names, dtype=tf.string)
-# labels = tf.convert_to_tensor(labels)
-#
-# dataset = tf.data.Dataset.from_tensor_slices((file_names, labels))
+import os
+import custom_data_generator
+import cv2
+matplotlib.use('TkAgg')
 
 input_size_x = 62
 input_size_y = 129
 directory = 'spectrograms/'
-img_gen = tf.keras.preprocessing.image.ImageDataGenerator(dtype=np.float32)
+#img_gen = tf.keras.preprocessing.image.ImageDataGenerator(dtype=np.float32)
+img_gen = custom_data_generator.DataGenerator()
 train_generator = img_gen.flow_from_directory(
   directory=directory+'train',
   target_size=(input_size_x, input_size_y),
@@ -38,14 +30,21 @@ validate_generator = img_gen.flow_from_directory(
   class_mode="categorical",
   shuffle=True
 )
-
+test_generator = img_gen.flow_from_directory(
+  directory+'test',
+  target_size=(input_size_x, input_size_y),
+  color_mode="grayscale",
+  batch_size=32,
+  class_mode="categorical",
+  shuffle=True
+)
 if False:
     spectrogram = train_generator.next()
     spectrogram = spectrogram[0]
     spectrogram = spectrogram[0]
-    spectrogram = spectrogram[:,:,0]
-    times = np.linspace(start = 0, stop = 1, num=input_size_y)
-    frequencies = np.linspace(start = 0, stop = 8000, num=input_size_x)
+    #spectrogram = spectrogram[:,:,0]
+    times = np.linspace(start = 0, stop = 1, num=input_size_x)
+    frequencies = np.linspace(start = 0, stop = 8000, num=input_size_y)
     plt.pcolormesh(times, frequencies, spectrogram)
     #plt.imshow(img) #, aspect=len(times)/len(frequencies)
     plt.ylabel('Frequency [Hz]')
@@ -64,7 +63,7 @@ if False: # True - Fit new model or False - load from disk
     # model.add(layers.Conv2D(filters=256, kernel_size=(3, 3),  activation='relu'))
     # model.add(layers.MaxPool2D(pool_size = (2, 2)))
     # model.add(layers.Dropout(0.25))
-    model.add(layers.Flatten(input_shape=(input_size_x, input_size_y, 1)))
+    model.add(layers.Flatten(input_shape=(input_size_y, input_size_x)))
     model.add(layers.Dense(units=128, activation='relu'))
     model.add(layers.Dense(units=256, activation='relu'))
     # model.add(layers.Dropout(0.5))
@@ -72,10 +71,10 @@ if False: # True - Fit new model or False - load from disk
 
     # Configure a model for categorical classification.
     model.compile(optimizer=tf.keras.optimizers.RMSprop(0.01), #keras.optimizers.Adam(lr=1e-6)
-                  loss=['categorical_crossentropy'],
+                  loss=['sparse_categorical_crossentropy'],
                   metrics=['accuracy']) #tf.keras.metrics.CategoricalAccuracy()
     model.summary()
-    history = model.fit(train_generator, epochs=5, batch_size=32,
+    history = model.fit(train_generator, epochs=16, batch_size=32,
               validation_data=validate_generator)
     # Plotting Results
 
@@ -115,13 +114,28 @@ else:
     #model.load_weights('./checkpoints/model_checkpoint')
     model.summary()
 
-#tf.keras.utils.plot_model(model, 'model.png', show_shapes=True)
+model.evaluate(test_generator, verbose=1)
 
-im = Image.open('spectrograms/test/8056e897_nohash_0.tif')
-imarray = np.array(im)
-prediction = model.predict(imarray.reshape(1, input_size_x, input_size_y, 1))
-print('Prediction:', prediction)
-im.show()
+#tf.keras.utils.plot_model(model, 'model.png', show_shapes=True)
+prefix = os.getcwd()
+folder_base     = prefix+'/spectrograms'
+folder_on       = '/on'
+folder_off      = '/off'
+folder_test     = '/test'
+test_folder_on = folder_base + folder_test + folder_on
+test_folder_off = folder_base + folder_test + folder_off
+
+for folder_check in (teinput_size_xst_folder_on, test_folder_off):
+    for filename in os.listdir(folder_check):
+        file_path = os.path.join(folder_check, filename)
+        if os.path.isfile(file_path):
+            img = cv2.imread(file_path, -1)
+            img = cv2.resize(img, (input_size_x,input_size_y), interpolation=cv2.INTER_AREA)
+            print('Test %s'%file_path)
+            imarray = np.array(img)
+            prediction = model.predict(imarray.reshape(1, input_size_y, input_size_x))
+            print('Prediction on:',  prediction[0][0])
+            print('Prediction off:', prediction[0][1])
 
 #result = model.predict(data, batch_size=32)
 #print(result)
