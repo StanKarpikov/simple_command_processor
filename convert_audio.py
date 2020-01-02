@@ -12,10 +12,11 @@ prefix = os.getcwd()
 directory = prefix + '/speech_commands_v0.01'
 
 validation_part = 0.1
-test_part = 0.01
+test_part = 0.05
 folder_base     = prefix+'/spectrograms'
 folder_on       = '/on'
 folder_off      = '/off'
+folder_other    = '/other'
 folder_validation  = '/validate'
 folder_test        = '/test'
 folder_train       = '/train'
@@ -37,6 +38,9 @@ os.makedirs(folder_base+folder_test+folder_on, exist_ok=True)
 os.makedirs(folder_base+folder_train+folder_off, exist_ok=True)
 os.makedirs(folder_base+folder_validation+folder_off, exist_ok=True)
 os.makedirs(folder_base+folder_test+folder_off, exist_ok=True)
+os.makedirs(folder_base+folder_train+folder_other, exist_ok=True)
+os.makedirs(folder_base+folder_validation+folder_other, exist_ok=True)
+os.makedirs(folder_base+folder_test+folder_other, exist_ok=True)
 # ---------------- Add new files ----------------
 for root, subdirs, files in os.walk(directory):
 #for filename in os.listdir(directory):
@@ -56,7 +60,7 @@ for root, subdirs, files in os.walk(directory):
             elif (root.endswith('off')):
                 out_path += folder_off
             else:
-                continue
+                out_path += folder_other
 
             full_filename = os.path.join(root, filename)
             print('Read %s'%(full_filename))

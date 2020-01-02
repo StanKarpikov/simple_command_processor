@@ -5,6 +5,24 @@ import numpy as np
 import sounddevice as sd
 import queue
 
+import matplotlib.pyplot  as plt
+import matplotlib
+
+def plot_pause(interval):
+    backend = plt.rcParams['backend']
+    if backend in matplotlib.rcsetup.interactive_bk:
+        figManager = matplotlib._pylab_helpers.Gcf.get_active()
+        if figManager is not None:
+            canvas = figManager.canvas
+            if canvas.figure.stale:
+                canvas.draw()
+            canvas.start_event_loop(interval)
+            return
+
+plt.ion()
+plt.subplots()
+plt.show(block=False)
+
 input_size_x = 62
 input_size_y = 129
 
@@ -25,6 +43,7 @@ try:
             print(text)
         if any(indata):
             samples = indata[:, 0]
+            #sd.play(samples,sample_rate)
             frequencies, times, spectrogram = signal.spectrogram(samples, sample_rate, nperseg=256, noverlap=0)
             maximum = np.max(spectrogram)
             print('max %f'%(maximum*1e6))
@@ -42,14 +61,27 @@ try:
             spectrogram = q.get()
             if spectrogram is None:
                 continue
+
             prediction = model.predict(spectrogram.reshape(1, input_size_y, input_size_x))
-            if prediction.max() > 0.5:
-                if prediction[0][0] > prediction[0][1]:
-                    print('on:  %.2f'%(prediction[0][0]))
+            arg = np.argmax(prediction)
+            probability = prediction[0][arg]
+            if probability > 0.9:
+                if arg == 0:
+                    print('on:   %.2f'%(probability))
+                elif arg == 2:
+                    print('off:  %.2f' % (probability))
                 else:
-                    print('off: %.2f'%(prediction[0][1]))
+                    print('+')
             else:
                 print('-')
+
+            if True:
+                times = np.linspace(start=0, stop=1, num=input_size_x)
+                frequencies = np.linspace(start=0, stop=8000, num=input_size_y)
+                plt.pcolormesh(times, frequencies, spectrogram)
+                plt.ylabel('Frequency [Hz]')
+                plt.xlabel('Time [sec]')
+                plot_pause(0.1)
 
 except KeyboardInterrupt:
     pass

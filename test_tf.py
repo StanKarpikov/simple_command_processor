@@ -22,6 +22,7 @@ train_generator = img_gen.flow_from_directory(
   class_mode="categorical",
   shuffle=True
 )
+categories = train_generator.get_categories()
 validate_generator = img_gen.flow_from_directory(
   directory+'validate',
   target_size=(input_size_x, input_size_y),
@@ -38,8 +39,9 @@ test_generator = img_gen.flow_from_directory(
   class_mode="categorical",
   shuffle=True
 )
-if False:
-    spectrogram = train_generator.next()
+if True:
+    for i in range(np.random.randint(1,100)):
+        spectrogram = train_generator.next()
     spectrogram = spectrogram[0]
     spectrogram = spectrogram[0]
     #spectrogram = spectrogram[:,:,0]
@@ -67,7 +69,7 @@ if False: # True - Fit new model or False - load from disk
     model.add(layers.Dense(units=128, activation='relu'))
     model.add(layers.Dense(units=256, activation='relu'))
     # model.add(layers.Dropout(0.5))
-    model.add(layers.Dense(units=2, activation='softmax'))
+    model.add(layers.Dense(units=3, activation='softmax'))
 
     # Configure a model for categorical classification.
     model.compile(optimizer=tf.keras.optimizers.RMSprop(0.01), #keras.optimizers.Adam(lr=1e-6)
@@ -121,11 +123,13 @@ prefix = os.getcwd()
 folder_base     = prefix+'/spectrograms'
 folder_on       = '/on'
 folder_off      = '/off'
+folder_other      = '/other'
 folder_test     = '/test'
 test_folder_on = folder_base + folder_test + folder_on
 test_folder_off = folder_base + folder_test + folder_off
+test_folder_other = folder_base + folder_test + folder_other
 
-for folder_check in (teinput_size_xst_folder_on, test_folder_off):
+for folder_check in (test_folder_on, test_folder_off, test_folder_other):
     for filename in os.listdir(folder_check):
         file_path = os.path.join(folder_check, filename)
         if os.path.isfile(file_path):
@@ -134,8 +138,9 @@ for folder_check in (teinput_size_xst_folder_on, test_folder_off):
             print('Test %s'%file_path)
             imarray = np.array(img)
             prediction = model.predict(imarray.reshape(1, input_size_y, input_size_x))
-            print('Prediction on:',  prediction[0][0])
-            print('Prediction off:', prediction[0][1])
+            print('Prediction %s:    %.1f'%( categories[0], prediction[0][0]))
+            print('Prediction %s:   %.1f'%( categories[1] , prediction[0][1]))
+            print('Prediction %s: %.1f'%( categories[2], prediction[0][2]))
 
 #result = model.predict(data, batch_size=32)
 #print(result)
