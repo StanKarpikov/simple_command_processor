@@ -33,8 +33,12 @@ q = queue.Queue()
 
 print(sd.query_devices())
 sample_rate = 16000
-block_duration = 1000 #msec
+chains = 4
+full_block_len = 1000
+block_duration = full_block_len/chains #msec
 device = 2
+global samples
+samples = []
 
 try:
     def callback(indata, frames, time, status):
@@ -42,7 +46,10 @@ try:
             text = '-- ' + str(status) + ' --'
             print(text)
         if any(indata):
-            samples = indata[:, 0]
+            global samples
+            if len(samples)>=full_block_len:
+               samples = samples[block_duration:]
+            samples.append(indata[:, 0])
             #sd.play(samples,sample_rate)
             frequencies, times, spectrogram = signal.spectrogram(samples, sample_rate, nperseg=256, noverlap=0)
             maximum = np.max(spectrogram)

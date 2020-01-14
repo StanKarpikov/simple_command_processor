@@ -42,6 +42,29 @@ os.makedirs(folder_base+folder_train+folder_other, exist_ok=True)
 os.makedirs(folder_base+folder_validation+folder_other, exist_ok=True)
 os.makedirs(folder_base+folder_test+folder_other, exist_ok=True)
 # ---------------- Add new files ----------------
+global mic_noise
+sample_rate, mic_noise = wavfile.read("mic_noise.wav")
+maximum = np.max(mic_noise)
+mic_noise = mic_noise / maximum
+
+def add_mic_noise(ssamples):
+    global mic_noise
+    insamples=samples
+    nstart = np.random.randint(len(mic_noise)-len(insamples))
+    nampl  = 5*random.random()
+    for i in range(len(insamples)):
+        insamples[i] = insamples[i] + mic_noise[i+nstart]*nampl
+    return insamples
+
+def rotate(insamples):
+    L=len(insamples)*0.2
+    n = int(np.random.randint(L)-L/2)
+    return np.roll(insamples, n)
+
+def reverse(samples):
+    samples.reverse()
+    return samples
+
 for root, subdirs, files in os.walk(directory):
 #for filename in os.listdir(directory):
     for filename in files:
@@ -65,25 +88,32 @@ for root, subdirs, files in os.walk(directory):
             full_filename = os.path.join(root, filename)
             print('Read %s'%(full_filename))
             sample_rate, samples = wavfile.read(full_filename)
-            #print('sample_rate %d samples %d'%(sample_rate, len(samples)))
-            # frequencies size = nperseg/2 + 1
-            # times size = len(samples)/nperseg if noverlap == 0
-            frequencies, times, spectrogram = signal.spectrogram(samples, sample_rate, nperseg=256, noverlap = 0)
-            maximum = np.max(spectrogram)
-            spectrogram = spectrogram/maximum
+            maximum = np.max(samples)
+            samples = samples/maximum
 
-            #plt.pcolormesh(times, frequencies, spectrogram)
-            ##plt.imshow(spectrogram, aspect=len(times)/len(frequencies))
-            #plt.ylabel('Frequency [Hz]')
-            #plt.xlabel('Time [sec]')
-            #plt.show()
-            #exit(1)
+            for k in range(30):
+                samples_n = add_mic_noise(samples)
+                samples_n = rotate(samples_n)
 
-            pure_filename = str(pathlib.Path(full_filename).stem)
-            pure_filename = pure_filename + '.tif'
-            full_filename_img = os.path.join(out_path, pure_filename)
+                #print('sample_rate %d samples %d'%(sample_rate, len(samples)))
+                # frequencies size = nperseg/2 + 1
+                # times size = len(samples)/nperseg if noverlap == 0
+                frequencies, times, spectrogram = signal.spectrogram(samples_n, sample_rate, nperseg=256, noverlap = 0)
+                #maximum = np.max(spectrogram)
+                #spectrogram = spectrogram/maximum
 
-            imsave(full_filename_img, spectrogram.astype(np.float32))
+                #plt.pcolormesh(times, frequencies, spectrogram)
+                ##plt.imshow(spectrogram, aspect=len(times)/len(frequencies))
+                #plt.ylabel('Frequency [Hz]')
+                #plt.xlabel('Time [sec]')
+                #plt.show()
+                ##exit(1)
+
+                pure_filename = str(pathlib.Path(full_filename).stem) + '_' + str(k)
+                pure_filename = pure_filename + '.tif'
+                full_filename_img = os.path.join(out_path, pure_filename)
+
+                imsave(full_filename_img, spectrogram.astype(np.float32))
 
             #break
 
