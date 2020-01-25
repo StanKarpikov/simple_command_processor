@@ -20,16 +20,16 @@ train_generator = img_gen.flow_from_directory(
   color_mode="grayscale",
   batch_size=32,
   class_mode="categorical",
-  shuffle=True
+  shuffle_it=True
 )
-categories = train_generator.get_categories()
+
 validate_generator = img_gen.flow_from_directory(
   directory+'validate',
   target_size=(input_size_x, input_size_y),
   color_mode="grayscale",
   batch_size=32,
   class_mode="categorical",
-  shuffle=True
+  shuffle_it=True
 )
 test_generator = img_gen.flow_from_directory(
   directory+'test',
@@ -37,24 +37,31 @@ test_generator = img_gen.flow_from_directory(
   color_mode="grayscale",
   batch_size=32,
   class_mode="categorical",
-  shuffle=True
+  shuffle_it=True
 )
-if True:
-    for i in range(np.random.randint(1,100)):
-        spectrogram = train_generator.next()
-    spectrogram = spectrogram[0]
-    spectrogram = spectrogram[0]
-    #spectrogram = spectrogram[:,:,0]
-    times = np.linspace(start = 0, stop = 1, num=input_size_x)
-    frequencies = np.linspace(start = 0, stop = 8000, num=input_size_y)
-    plt.pcolormesh(times, frequencies, spectrogram)
-    #plt.imshow(img) #, aspect=len(times)/len(frequencies)
-    plt.ylabel('Frequency [Hz]')
-    plt.xlabel('Time [sec]')
-    plt.show()
+categories = test_generator.get_categories()
+print(categories)
+if 0:
+    sp = train_generator[np.random.randint(0,len(train_generator))]
+    #data type
+    spectrograms = sp[0]
+    cats = sp[1]
+    for i in range(32):
+        #element
+        spectrogram = spectrograms[i]
+        cat = cats[i]
+        print('Category:', categories[int(cat)])
+        #spectrogram = spectrogram[:,:,0]
+        times = np.linspace(start = 0, stop = 1, num=input_size_x)
+        frequencies = np.linspace(start = 0, stop = 8000, num=input_size_y)
+        plt.pcolormesh(times, frequencies, spectrogram)
+        #plt.imshow(img) #, aspect=len(times)/len(frequencies)
+        plt.ylabel('Frequency [Hz]')
+        plt.xlabel('Time [sec]')
+        plt.show()
     exit(0)
 
-if False: # True - Fit new model or False - load from disk
+if True: # True - Fit new model or False - load from disk
     model = tf.keras.models.Sequential()
     # model.add(layers.Conv2D(input_shape=(input_size_x, input_size_y, 1), filters=32, kernel_size=(3, 3),  activation='relu'))
     # model.add(layers.MaxPool2D(pool_size = (2, 2)))
@@ -76,7 +83,7 @@ if False: # True - Fit new model or False - load from disk
                   loss=['sparse_categorical_crossentropy'],
                   metrics=['accuracy']) #tf.keras.metrics.CategoricalAccuracy()
     model.summary()
-    history = model.fit(train_generator, epochs=16, batch_size=32,
+    history = model.fit(train_generator, epochs=32, batch_size=32,
               validation_data=validate_generator)
     # Plotting Results
 
@@ -116,7 +123,8 @@ else:
     #model.load_weights('./checkpoints/model_checkpoint')
     model.summary()
 
-model.evaluate(test_generator, verbose=1)
+if True:
+    model.evaluate(test_generator, verbose=1)
 
 #tf.keras.utils.plot_model(model, 'model.png', show_shapes=True)
 prefix = os.getcwd()
@@ -129,17 +137,21 @@ test_folder_on = folder_base + folder_test + folder_on
 test_folder_off = folder_base + folder_test + folder_off
 test_folder_other = folder_base + folder_test + folder_other
 
+counter=0
 for folder_check in (test_folder_on, test_folder_off, test_folder_other):
     for filename in os.listdir(folder_check):
         file_path = os.path.join(folder_check, filename)
         if os.path.isfile(file_path):
+            counter+=1
+            if counter>50:
+                exit(0)
             img = cv2.imread(file_path, -1)
             img = cv2.resize(img, (input_size_x,input_size_y), interpolation=cv2.INTER_AREA)
             print('Test %s'%file_path)
             imarray = np.array(img)
             prediction = model.predict(imarray.reshape(1, input_size_y, input_size_x))
-            print('Prediction %s:    %.1f'%( categories[0], prediction[0][0]))
-            print('Prediction %s:   %.1f'%( categories[1] , prediction[0][1]))
+            print('Prediction %s: %.1f'%( categories[0], prediction[0][0]))
+            print('Prediction %s: %.1f'%( categories[1], prediction[0][1]))
             print('Prediction %s: %.1f'%( categories[2], prediction[0][2]))
 
 #result = model.predict(data, batch_size=32)

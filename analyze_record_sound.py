@@ -35,10 +35,14 @@ print(sd.query_devices())
 sample_rate = 16000
 chains = 4
 full_block_len = 1000
-block_duration = full_block_len/chains #msec
+block_duration = round(full_block_len/chains) #msec
+block_size = round(sample_rate * block_duration / 1000)
 device = 2
 global samples
-samples = []
+samples = np.zeros(round(sample_rate * full_block_len / 1000))
+global c
+c=None
+categories = ['on', 'other', 'off']
 
 try:
     def callback(indata, frames, time, status):
@@ -47,19 +51,17 @@ try:
             print(text)
         if any(indata):
             global samples
-            if len(samples)>=full_block_len:
-               samples = samples[block_duration:]
-            samples.append(indata[:, 0])
+            samples=np.roll(samples, -block_size)
+            samples[-block_size-1:-1] = indata[:, 0]
             #sd.play(samples,sample_rate)
             frequencies, times, spectrogram = signal.spectrogram(samples, sample_rate, nperseg=256, noverlap=0)
             maximum = np.max(spectrogram)
-            print('max %f'%(maximum*1e6))
-            if(maximum*1e6 > 0.1):
+            if(maximum*1e6 > 5):
+                #print('max %f' % (maximum * 1e6))
                 spectrogram = np.array(spectrogram / maximum)
                 q.put(spectrogram)
         else:
             print('no input')
-
 
     with sd.InputStream(device=device, channels=1, callback=callback,
                         blocksize=int(sample_rate * block_duration / 1000),
@@ -70,22 +72,25 @@ try:
                 continue
 
             prediction = model.predict(spectrogram.reshape(1, input_size_y, input_size_x))
+            print(prediction)
             arg = np.argmax(prediction)
             probability = prediction[0][arg]
-            if probability > 0.9:
-                if arg == 0:
-                    print('on:   %.2f'%(probability))
-                elif arg == 2:
-                    print('off:  %.2f' % (probability))
-                else:
-                    print('+')
+            #if probability > 0.9:
+            if arg == 0:
+                print('on:   %.2f'%(probability))
+            elif arg == 2:
+                print('off:  %.2f'%(probability))
             else:
-                print('-')
+                print('other')
+            #else:
+             #   print('?')
 
             if True:
                 times = np.linspace(start=0, stop=1, num=input_size_x)
                 frequencies = np.linspace(start=0, stop=8000, num=input_size_y)
-                plt.pcolormesh(times, frequencies, spectrogram)
+                if c is not None:
+                    c.remove()
+                c = plt.pcolormesh(times, frequencies, spectrogram)
                 plt.ylabel('Frequency [Hz]')
                 plt.xlabel('Time [sec]')
                 plot_pause(0.1)
