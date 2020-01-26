@@ -9,8 +9,8 @@ import custom_data_generator
 import cv2
 matplotlib.use('TkAgg')
 
-input_size_x = 62
-input_size_y = 129
+input_size_x = 13
+input_size_y = 99
 directory = 'spectrograms/'
 #img_gen = tf.keras.preprocessing.image.ImageDataGenerator(dtype=np.float32)
 img_gen = custom_data_generator.DataGenerator()
@@ -41,7 +41,7 @@ test_generator = img_gen.flow_from_directory(
 )
 categories = test_generator.get_categories()
 print(categories)
-if 0:
+if False:
     sp = train_generator[np.random.randint(0,len(train_generator))]
     #data type
     spectrograms = sp[0]

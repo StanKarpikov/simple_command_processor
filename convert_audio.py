@@ -7,6 +7,7 @@ import pathlib
 from tifffile import imsave
 import random
 import os, shutil
+import speechpy
 
 prefix = os.getcwd()
 directory = prefix + '/speech_commands_v0.01'
@@ -103,20 +104,28 @@ for root, subdirs, files in os.walk(directory):
                 #samples_n = add_mic_noise(samples)
                 samples_n = rotate(samples)
 
-                #print('sample_rate %d samples %d'%(sample_rate, len(samples)))
-                # frequencies size = nperseg/2 + 1
-                # times size = len(samples)/nperseg if noverlap == 0
-                frequencies, times, spectrogram = signal.spectrogram(samples_n, sample_rate, nperseg=256, noverlap = 0)
-                maximum = np.max(spectrogram)
-                spectrogram = spectrogram/maximum
+                if False:
+                    #print('sample_rate %d samples %d'%(sample_rate, len(samples)))
+                    # frequencies size = nperseg/2 + 1
+                    # times size = len(samples)/nperseg if noverlap == 0
+                    frequencies, times, spectrogram = signal.spectrogram(samples_n, sample_rate, nperseg=256, noverlap = 0)
+                    maximum = np.max(spectrogram)
+                    spectrogram = spectrogram/maximum
+                else:
+                    ############# Extract MFCC features #############
+                    mfcc = speechpy.feature.mfcc(samples_n, sampling_frequency=sample_rate, frame_length=0.01, frame_stride=0.01,
+                                                 num_filters=40, fft_length=256, low_frequency=0, high_frequency=None)
+                    mfcc_cmvn = speechpy.processing.cmvnw(mfcc, win_size=301, variance_normalization=True)
+                    spectrogram = mfcc_cmvn
 
-                if 0:
-                    plt.pcolormesh(times, frequencies, spectrogram)
-                    #plt.imshow(spectrogram, aspect=len(times)/len(frequencies))
-                    plt.ylabel('Frequency [Hz]')
-                    plt.xlabel('Time [sec]')
+                if False:
+                    #plt.pcolormesh(times, frequencies, spectrogram)
+                    plt.pcolormesh(spectrogram)
+                    # plt.imshow(spectrogram, aspect=len(times)/len(frequencies))
+                    #plt.ylabel('Frequency [Hz]')
+                    #plt.xlabel('Time [sec]')
                     plt.show()
-                    #exit(1)
+                    # exit(1)
 
                 pure_filename = str(pathlib.Path(full_filename).stem) + '_' + str(k)
                 pure_filename = pure_filename + '.tif'
